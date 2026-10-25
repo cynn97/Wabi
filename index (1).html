@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WABI | Asistente Académico</title>
+<meta name="description" content="WABI sincroniza tus actividades de Moodle y te recuerda por WhatsApp lo que está por vencer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tinta: #12203a;        /* texto y paneles oscuros */
+    --papel: #f2f5fa;        /* fondo general */
+    --linea: #d5dcea;
+    --suave: #56627a;
+    --marcador: #ffd84d;     /* resaltador de estudiante */
+    --verde: #1f9d6b;
+    --burbuja: #e9eef7;
+    --fuente-titulo: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --fuente-texto: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--papel); color: var(--tinta); font: 400 1.0625rem/1.65 var(--fuente-texto); }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--tinta); outline-offset: 3px; border-radius: 4px; }
+  .contenedor { width: min(1080px, 100% - 40px); margin-inline: auto; }
+
+  /* Barra superior */
+  .barra { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
+  .marca { font: 800 1.5rem/1 var(--fuente-titulo); letter-spacing: .01em; text-decoration: none; }
+  .marca::after { content: ""; display: inline-block; width: .5em; height: .5em; margin-left: .2em; background: var(--marcador); border-radius: 50%; }
+  .barra nav { display: flex; gap: 26px; font-weight: 500; }
+  .barra nav a { text-decoration: none; color: var(--suave); white-space: nowrap; }
+  .barra nav a:hover { color: var(--tinta); }
+
+  /* Portada */
+  .portada { display: grid; grid-template-columns: 1.1fr .9fr; gap: 56px; align-items: center; padding: 48px 0 96px; }
+  h1 { font: 800 clamp(2.4rem, 5.2vw, 4rem)/1.04 var(--fuente-titulo); letter-spacing: -.02em; margin: 0 0 22px; }
+  .portada p.lead { font-size: 1.2rem; color: var(--suave); max-width: 34em; margin: 0 0 30px; }
+  .etiquetas { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; margin: 0; list-style: none; }
+  .etiquetas li { padding: 7px 14px; border: 1.5px solid var(--tinta); border-radius: 999px; font-weight: 500; font-size: .95rem; }
+  .etiquetas li:first-child { background: var(--marcador); border-color: var(--marcador); }
+
+  /* Chat de ejemplo (lo memorable de la página) */
+  .telefono { background: var(--tinta); border-radius: 28px; padding: 18px 16px 22px; box-shadow: 0 30px 60px -28px rgba(18,32,58,.55); max-width: 400px; margin-inline: auto; width: 100%; }
+  .telefono-cab { display: flex; align-items: center; gap: 12px; color: #fff; padding: 4px 6px 16px; border-bottom: 1px solid rgba(255,255,255,.14); }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--marcador); color: var(--tinta); display: grid; place-items: center; font: 800 .95rem var(--fuente-titulo); }
+  .telefono-cab strong { display: block; line-height: 1.2; }
+  .telefono-cab span { font-size: .82rem; color: #9fb0cf; }
+  .chat { display: flex; flex-direction: column; gap: 10px; padding: 18px 4px 4px; }
+  .burbuja { background: var(--burbuja); color: var(--tinta); padding: 11px 14px; border-radius: 4px 16px 16px 16px; max-width: 92%; font-size: .96rem; line-height: 1.45; }
+  .burbuja b { font-weight: 600; }
+  .burbuja small { display: block; margin-top: 6px; color: var(--suave); font-size: .78rem; }
+  .burbuja.yo { align-self: flex-end; background: #bfe9d3; border-radius: 16px 4px 16px 16px; }
+  .ejemplo { color: #9fb0cf; font-size: .8rem; text-align: center; margin: 14px 0 0; }
+  @media (prefers-reduced-motion: no-preference) {
+    .chat .burbuja { opacity: 0; transform: translateY(8px); animation: entra .5s ease forwards; }
+    .chat .burbuja:nth-child(1) { animation-delay: .3s; }
+    .chat .burbuja:nth-child(2) { animation-delay: 1.3s; }
+    .chat .burbuja:nth-child(3) { animation-delay: 2.1s; }
+    @keyframes entra { to { opacity: 1; transform: none; } }
+  }
+
+  /* Secciones */
+  section { padding: 72px 0; border-top: 1px solid var(--linea); }
+  h2 { font: 800 clamp(1.7rem, 3.4vw, 2.3rem)/1.12 var(--fuente-titulo); letter-spacing: -.01em; margin: 0 0 14px; }
+  .intro { color: var(--suave); max-width: 38em; margin: 0 0 36px; }
+  .dos { display: grid; grid-template-columns: 1fr 1.5fr; gap: 56px; }
+
+  /* Pasos (sí son una secuencia) */
+  .pasos { list-style: none; counter-reset: paso; margin: 0; padding: 0; }
+  .pasos li { counter-increment: paso; display: grid; grid-template-columns: 56px 1fr; gap: 6px 18px; padding: 22px 0; border-top: 1px solid var(--linea); }
+  .pasos li:last-child { border-bottom: 1px solid var(--linea); }
+  .pasos li::before { content: counter(paso); grid-row: span 2; font: 800 2.6rem/1 var(--fuente-titulo); color: var(--tinta); background: linear-gradient(transparent 62%, var(--marcador) 62%); align-self: start; width: fit-content; padding: 0 4px; }
+  .pasos h3 { margin: 0; font: 600 1.15rem/1.3 var(--fuente-texto); }
+  .pasos p { margin: 0; color: var(--suave); max-width: 36em; }
+
+  /* Lista de decisiones del usuario */
+  .decide { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+  .decide li { break-inside: avoid; padding: 14px 0 14px 28px; position: relative; border-top: 1px solid var(--linea); }
+  .decide li::before { content: ""; position: absolute; left: 2px; top: 22px; width: 12px; height: 12px; border-radius: 50%; background: var(--verde); }
+
+  /* Privacidad */
+  .privacidad dl { margin: 0; }
+  .privacidad dt { font-weight: 600; margin-top: 22px; }
+  .privacidad dt:first-child { margin-top: 0; }
+  .privacidad dd { margin: 4px 0 0; color: var(--suave); max-width: 40em; }
+
+  .contacto a.correo { display: inline-block; margin-top: 8px; font: 800 clamp(1.3rem, 3vw, 1.9rem)/1.2 var(--fuente-titulo); text-decoration: none; background: linear-gradient(transparent 62%, var(--marcador) 62%); }
+  .contacto a.correo:hover { background: var(--marcador); }
+  footer { padding: 28px 0 44px; color: var(--suave); font-size: .92rem; border-top: 1px solid var(--linea); }
+
+  @media (max-width: 860px) {
+    .portada { grid-template-columns: 1fr; gap: 44px; padding-bottom: 64px; }
+    .dos { grid-template-columns: 1fr; gap: 12px; }
+    .decide { columns: 1; }
+    .barra nav { gap: 14px; font-size: .9rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="contenedor">
+  <header class="barra">
+    <a class="marca" href="#">WABI</a>
+    <nav aria-label="Principal">
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="privacidad.html">Privacidad</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+  </header>
+
+  <div class="portada">
+    <div>
+      <h1>Que ninguna entrega te tome por sorpresa.</h1>
+      <p class="lead">WABI revisa tu aula de Moodle, ordena tus tareas, exámenes y clases, y te avisa por WhatsApp antes de que venzan.</p>
+      <ul class="etiquetas" aria-label="Qué incluye">
+        <li>Moodle</li>
+        <li>WhatsApp</li>
+        <li>Tú eliges cuándo avisar</li>
+      </ul>
+    </div>
+
+    <figure class="telefono" style="margin: 0" aria-label="Ejemplo de conversación con WABI">
+      <div class="telefono-cab">
+        <div class="avatar" aria-hidden="true">W</div>
+        <div><strong>WABI | Asistente Académico</strong><span>en línea</span></div>
+      </div>
+      <div class="chat">
+        <div class="burbuja">
+          <b>Recordatorio</b><br>
+          Tu <b>Informe de laboratorio</b> de Física II vence en 3 días: jueves 29 de octubre, 23:59.
+          <small>08:00</small>
+        </div>
+        <div class="burbuja yo">Gracias, ya lo estoy terminando.<small>08:02</small></div>
+        <div class="burbuja">
+          <b>Clase en 10 minutos</b><br>
+          Cálculo II empieza a las 10:00. Entra aquí cuando quieras.
+          <small>09:50</small>
+        </div>
+      </div>
+      <p class="ejemplo">Conversación de ejemplo</p>
+    </figure>
+  </div>
+</div>
+
+<main>
+  <section id="como-funciona">
+    <div class="contenedor dos">
+      <div>
+        <h2>Cómo funciona</h2>
+        <p class="intro">Tres pasos, una sola vez. Después WABI trabaja solo.</p>
+      </div>
+      <ol class="pasos">
+        <li>
+          <h3>Conecta tu Moodle</h3>
+          <p>Con el enlace de tu calendario o con un token. WABI nunca te pide la contraseña de tu aula.</p>
+        </li>
+        <li>
+          <h3>Guarda tu número de WhatsApp</h3>
+          <p>Es el único lugar al que llegan los avisos, y solo con tu consentimiento.</p>
+        </li>
+        <li>
+          <h3>Elige cuándo quieres que te avise</h3>
+          <p>Días, horas o minutos antes, según el tipo de actividad, y un horario de silencio para descansar.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="contenedor dos">
+      <div>
+        <h2>Tú decides</h2>
+        <p class="intro">Los avisos se adaptan a tu forma de estudiar.</p>
+      </div>
+      <ul class="decide">
+        <li>Qué te avisa: tareas, exámenes, foros, clases sincrónicas o eventos personales.</li>
+        <li>Con cuánta anticipación, por separado para tareas, clases y eventos.</li>
+        <li>Un horario de silencio, para que no te escriba de madrugada.</li>
+        <li>Un aviso si cambia la fecha de una actividad en Moodle.</li>
+        <li>Tus propios eventos, como una reunión de grupo o una exposición.</li>
+        <li>Desactivar los mensajes cuando quieras.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="privacidad" class="privacidad">
+    <div class="contenedor dos">
+      <div>
+        <h2>Tus datos</h2>
+        <p class="intro">Qué usa WABI y cómo pedir que se borre.</p>
+      </div>
+      <div>
+        <p class="intro" style="margin-bottom:12px">WABI usa tu nombre, correo, número de WhatsApp y las actividades que vienen de tu Moodle. Nunca te pide la contraseña de tu aula.</p>
+        <p class="intro" style="margin-bottom:12px">Para responder tus consultas, el texto de tus mensajes y los datos de tus actividades se procesan con Google Gemini. Los avisos se entregan por WhatsApp (Meta).</p>
+        <p><a href="privacidad.html">Política de privacidad</a> · <a href="condiciones.html">Condiciones del servicio</a> · <a href="eliminacion-datos.html">Eliminación de datos</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="contacto" class="contacto">
+    <div class="contenedor">
+      <h2>Contacto</h2>
+      <p class="intro">¿Dudas sobre WABI o sobre tus datos? Escríbenos.</p>
+      <a class="correo" href="mailto:wabi.asistente@gmail.com">wabi.asistente@gmail.com</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="contenedor">WABI | Asistente Académico. Proyecto de graduación con fines académicos, 2026. <a href="privacidad.html">Privacidad</a> · <a href="condiciones.html">Condiciones</a> · <a href="eliminacion-datos.html">Eliminar datos</a></div>
+</footer>
+
+</body>
+</html>
